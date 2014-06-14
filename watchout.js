@@ -9,7 +9,7 @@ var gameboard = d3.select('div.gameboard')
 var enemies = _.range(20);
 var enemyRadius = 10;
 var heroRadius = 10;
-var easingArray = ['bounce', 'elastic', 'quad', 'circle'];
+var easingArray = ['bounce', 'elastic', 'quad', 'circle', 'sin', ''];
 var easingGenerator = function(array) {
   return array[Math.floor(Math.random() * array.length)];
 };
@@ -23,7 +23,7 @@ var moveY = function(){
 var update = function(){
   gameboard.selectAll('circle.enemies')
            .transition()
-           .duration(1900)
+           .duration(3000)
            .delay(100)
            .ease(easingGenerator(easingArray))
            .attr({'cx': function(){
@@ -38,19 +38,55 @@ var update = function(){
 var moveHero = function(){
     var dragTarget = d3.select(this);
     dragTarget
-        .attr("cx", function(){
-          var newXPosition = d3.event.dx + parseInt(dragTarget.attr("cx"));
+        .attr('cx', function(){
+          var newXPosition = d3.event.dx + parseInt(dragTarget.attr('cx'));
           if (newXPosition > (width - heroRadius)) {return (width - heroRadius);}
           if (newXPosition < heroRadius) {return heroRadius;}
           return newXPosition;
         })
-        .attr("cy", function(){
-          var newYPosition = d3.event.dy + parseInt(dragTarget.attr("cy"));
+        .attr('cy', function(){
+          var newYPosition = d3.event.dy + parseInt(dragTarget.attr('cy'));
           if (newYPosition > (height - heroRadius)) {return (height - heroRadius);}
           if (newYPosition < heroRadius) {return heroRadius;}
           return newYPosition;
         });
 };
+
+// Check for collisions.
+var checkCollision = function(callback){
+  var hero = d3.selectAll('.hero');
+  var enemies = d3.selectAll('.enemies');
+
+  enemies.each(function() {
+    var enemy = d3.select(this);
+    var radiusSum = parseFloat(enemy.attr('r')) + parseFloat(hero.attr('r'));
+    var xDiff =  parseFloat(enemy.attr('cx')) - parseFloat(hero.attr('cx'));
+    var yDiff =  parseFloat(enemy.attr('cy')) - parseFloat(hero.attr('cy'));
+    var separation = Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+    if(separation < radiusSum) {
+      callback();
+    }
+
+  });
+};
+var collidedCallback = function() {
+  console.log('you lost loser');
+  // update high score
+  // reset timer
+  // update score
+};
+
+// Setup the hero.
+gameboard.selectAll()
+         .data(['hero'])
+         .enter().append('circle')
+         .attr({'class': 'hero',
+                'fill': 'orange',
+                'r': heroRadius,
+                'cx': width/2,
+                'cy': (height / 2)
+              })
+         .call(d3.behavior.drag().on('drag', moveHero));
 
 // Setup gameboard.
 gameboard.selectAll('circle')
@@ -67,16 +103,7 @@ gameboard.selectAll('circle')
                 }
               });
 
-// Setup the hero.
-gameboard.selectAll()
-         .data(['hero'])
-         .enter().append('circle')
-         .attr({'class': 'hero',
-                'fill': 'orange',
-                'r': heroRadius,
-                'cx': width/2,
-                'cy': (height / 2)
-              })
-         .call(d3.behavior.drag().on("drag", moveHero));
-
 setInterval(update, 1000);
+setInterval(function() {
+  checkCollision(collidedCallback);
+}, 50);
