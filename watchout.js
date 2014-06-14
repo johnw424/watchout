@@ -13,8 +13,8 @@ var gameboard = d3.select('div.gameboard')
 var enemies = _.range(20);
 var enemyRadius = 10;
 var heroRadius = 10;
-var easingArray = ['linear', 'quad', 'circle', 'sin', 'back', ''];
-var easingGenerator = function(array) {
+var easingOptions = ['linear', 'quad', 'circle', 'sin', 'back', ''];
+var enemyStrategyGenerator = function(array) {
   return array[Math.floor(Math.random() * array.length)];
 };
 var moveX = function(){
@@ -23,34 +23,44 @@ var moveX = function(){
 var moveY = function(){
   return Math.random() * (height - enemyRadius * 2) + enemyRadius;
 };
+
 // Update gameboard.
 var update = function(){
   gameboard.selectAll('circle.enemies')
            .transition()
            .duration(1100)
            .delay(100)
-           .ease(easingGenerator(easingArray))
+           .ease(enemyStrategyGenerator(easingOptions))
            .attr({'cx': function(){
                   return moveX();
-                 },
+                },
                  'cy': function(){
                   return moveY();
-                 }
-               });
+                }
+                });
 };
 
 var moveHero = function(){
   var dragTarget = d3.select(this);
+  // Find the position relative to the hero's start position and mouse location for cx and cy.
   dragTarget.attr('cx', function(){
     var newXPosition = d3.event.dx + parseInt(dragTarget.attr('cx'));
-    if (newXPosition > (width - heroRadius)) {return (width - heroRadius);}
-    if (newXPosition < heroRadius) {return heroRadius;}
+    if (newXPosition > (width - heroRadius)) {
+      return (width - heroRadius);
+    }
+    if (newXPosition < heroRadius) {
+      return heroRadius;
+    }
     return newXPosition;
   })
   .attr('cy', function(){
     var newYPosition = d3.event.dy + parseInt(dragTarget.attr('cy'));
-    if (newYPosition > (height - heroRadius)) {return (height - heroRadius);}
-    if (newYPosition < heroRadius) {return heroRadius;}
+    if (newYPosition > (height - heroRadius)) {
+      return (height - heroRadius);
+    }
+    if (newYPosition < heroRadius) {
+      return heroRadius;
+    }
     return newYPosition;
   });
 };
@@ -59,7 +69,7 @@ var moveHero = function(){
 var checkCollision = function(callback){
   var hero = d3.selectAll('.hero');
   var enemies = d3.selectAll('.enemies');
-
+  // For each enemy check if they are in a collision state with the hero.
   enemies.each(function() {
     var enemy = d3.select(this);
     var radiusSum = parseFloat(enemy.attr('r')) + parseFloat(hero.attr('r'));
@@ -71,8 +81,10 @@ var checkCollision = function(callback){
     }
   });
 };
+
+// Handle collisions.
 var collidedCallback = function() {
-  // Short pause on collision detection
+  // Pause scoring and collision count when a collision occurs.
   collisionDetection = false;
   d3.selectAll('.hero')
     .transition()
@@ -81,15 +93,14 @@ var collidedCallback = function() {
     .transition()
     .duration(1500)
     .attr('fill', 'orange');
+  // Restart scoring and collision count after delay period expires.
   setTimeout(function(){
     collisionDetection = true;
   }, 2000);
-  // Increment & update collision count
+  // Update collision count and scores.
   collisions++;
   d3.selectAll('.collisions span').text(collisions);
-  // Check current score
   if(currentScore > highScore) {
-    // Set new high score
     highScore = currentScore;
     d3.selectAll('.high span').text(highScore);
   }
@@ -97,7 +108,7 @@ var collidedCallback = function() {
   d3.selectAll('.current span').text(currentScore);
 };
 
-// Setup the hero.
+// Setup the hero on the gameboard.
 gameboard.selectAll()
          .data(['hero'])
          .enter().append('circle')
@@ -109,7 +120,7 @@ gameboard.selectAll()
               })
          .call(d3.behavior.drag().on('drag', moveHero));
 
-// Setup gameboard.
+// Setup the enemies on the gameboard.
 gameboard.selectAll('circle')
          .data(enemies)
          .enter().append('circle')
@@ -124,7 +135,10 @@ gameboard.selectAll('circle')
                 }
               });
 
+// Update enemy locations.
 setInterval(update, 600);
+
+// Update the scoreboard.
 setInterval(function() {
   if(collisionDetection){
     currentScore += 10;
@@ -132,6 +146,7 @@ setInterval(function() {
   }
 }, 250);
 
+// Check for collisions.
 setInterval(function(){
   if(collisionDetection){
     checkCollision(collidedCallback);
