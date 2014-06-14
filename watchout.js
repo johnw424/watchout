@@ -1,4 +1,8 @@
 // start slingin' some d3 here.
+var highScore = 0;
+var currentScore = 0;
+var collisions = 0;
+var collisionDetection = true;
 var width = 900;
 var height = 500;
 var gameboard = d3.select('div.gameboard')
@@ -9,7 +13,7 @@ var gameboard = d3.select('div.gameboard')
 var enemies = _.range(20);
 var enemyRadius = 10;
 var heroRadius = 10;
-var easingArray = ['bounce', 'elastic', 'quad', 'circle', 'sin', ''];
+var easingArray = ['linear', 'quad', 'circle', 'sin', 'back', ''];
 var easingGenerator = function(array) {
   return array[Math.floor(Math.random() * array.length)];
 };
@@ -23,7 +27,7 @@ var moveY = function(){
 var update = function(){
   gameboard.selectAll('circle.enemies')
            .transition()
-           .duration(3000)
+           .duration(1100)
            .delay(100)
            .ease(easingGenerator(easingArray))
            .attr({'cx': function(){
@@ -36,20 +40,19 @@ var update = function(){
 };
 
 var moveHero = function(){
-    var dragTarget = d3.select(this);
-    dragTarget
-        .attr('cx', function(){
-          var newXPosition = d3.event.dx + parseInt(dragTarget.attr('cx'));
-          if (newXPosition > (width - heroRadius)) {return (width - heroRadius);}
-          if (newXPosition < heroRadius) {return heroRadius;}
-          return newXPosition;
-        })
-        .attr('cy', function(){
-          var newYPosition = d3.event.dy + parseInt(dragTarget.attr('cy'));
-          if (newYPosition > (height - heroRadius)) {return (height - heroRadius);}
-          if (newYPosition < heroRadius) {return heroRadius;}
-          return newYPosition;
-        });
+  var dragTarget = d3.select(this);
+  dragTarget.attr('cx', function(){
+    var newXPosition = d3.event.dx + parseInt(dragTarget.attr('cx'));
+    if (newXPosition > (width - heroRadius)) {return (width - heroRadius);}
+    if (newXPosition < heroRadius) {return heroRadius;}
+    return newXPosition;
+  })
+  .attr('cy', function(){
+    var newYPosition = d3.event.dy + parseInt(dragTarget.attr('cy'));
+    if (newYPosition > (height - heroRadius)) {return (height - heroRadius);}
+    if (newYPosition < heroRadius) {return heroRadius;}
+    return newYPosition;
+  });
 };
 
 // Check for collisions.
@@ -66,14 +69,32 @@ var checkCollision = function(callback){
     if(separation < radiusSum) {
       callback();
     }
-
   });
 };
 var collidedCallback = function() {
-  console.log('you lost loser');
-  // update high score
-  // reset timer
-  // update score
+  // Short pause on collision detection
+  collisionDetection = false;
+  d3.selectAll('.hero')
+    .transition()
+    .duration(500)
+    .attr('fill', 'red')
+    .transition()
+    .duration(1500)
+    .attr('fill', 'orange');
+  setTimeout(function(){
+    collisionDetection = true;
+  }, 2000);
+  // Increment & update collision count
+  collisions++;
+  d3.selectAll('.collisions span').text(collisions);
+  // Check current score
+  if(currentScore > highScore) {
+    // Set new high score
+    highScore = currentScore;
+    d3.selectAll('.high span').text(highScore);
+  }
+  currentScore = 0;
+  d3.selectAll('.current span').text(currentScore);
 };
 
 // Setup the hero.
@@ -103,7 +124,16 @@ gameboard.selectAll('circle')
                 }
               });
 
-setInterval(update, 1000);
+setInterval(update, 600);
 setInterval(function() {
-  checkCollision(collidedCallback);
+  if(collisionDetection){
+    currentScore += 10;
+    d3.selectAll('.current span').text(currentScore);
+  }
+}, 250);
+
+setInterval(function(){
+  if(collisionDetection){
+    checkCollision(collidedCallback);
+  }
 }, 50);
